@@ -1,0 +1,326 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Using TensorFlow backend.\n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd \n",
+    "import numpy as np\n",
+    "import matplotlib as plt\n",
+    "\n",
+    "from keras.models import Sequential\n",
+    "from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D\n",
+    "from keras.layers import Dropout, Flatten, Dense\n",
+    "from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Define Paths to the Image Data\n",
+    "As we are working with images and not a dataset we only need to define the paths to the images. When working with just images we sometimes need to split the images further into seperate folders which will be defined as classes or labels later on.\n",
+    "\n",
+    "To Do:\n",
+    "- Find the correct paths to the training set and testing set\n",
+    "- Define two seperate paths to the images within these folders"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "TRAINING_DATA= 'data/train/'\n",
+    "TESTING_PATH = 'data/test/'\n",
+    "PATH = 'data/'"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Data Augmentation Example\n",
+    "Here we are gonna augent one of our images and put it in a folder called preview. This stage is to only show you how to go about augmenting your data with keras. Later we will use to hopefully improve our model. \n",
+    "\n",
+    "To Do:\n",
+    "- Define an ImageDataGenerater with different parameters\n",
+    "- Find an image that you want to augment and convert to an array\n",
+    "- Use a for loop and your generator to generate the augmented images"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "batch_size=16\n",
+    "\n",
+    "datagen = ImageDataGenerator(rotation_range=40, rescale=1./255, horizontal_flip=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "img = load_img(PATH+'train/cats/cat.1.jpg')\n",
+    "x = img_to_array(img)\n",
+    "x = x.reshape((1,) + x.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "i=0\n",
+    "for batch in datagen.flow(x, batch_size=1, save_to_dir=PATH+'preview', save_format='jpeg'):\n",
+    "    i+=1\n",
+    "    if i>20:\n",
+    "        break"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Augment the Images\n",
+    "Now that we have seen what the accuracy of our model before adding any extra data we will now augment the images to provide extra variations of our images. This will also help generalise our model so it doesn't overfit on our training data. We only want to add these variations to the training data and not the validation. \n",
+    "\n",
+    "To Do:\n",
+    "- Build an image generator like we did previously but for both the training data and validation data\n",
+    "- Build a training generator and a validation generator using the images from the image generators we made\n",
+    "- Train the same model again with the new images"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Found 5000 images belonging to 2 classes.\n",
+      "Found 2000 images belonging to 2 classes.\n"
+     ]
+    }
+   ],
+   "source": [
+    "train_datagen = ImageDataGenerator(rescale=1./255,horizontal_flip=True,rotation_range=40)\n",
+    "test_datagen = ImageDataGenerator(rescale=1./255)\n",
+    "\n",
+    "train_generator = train_datagen.flow_from_directory(PATH+'Train',\n",
+    "                                                    target_size=(150,150),\n",
+    "                                                   batch_size=batch_size,\n",
+    "                                                   class_mode='binary')\n",
+    "\n",
+    "validation_generator = test_datagen.flow_from_directory(PATH+'Test',\n",
+    "                                                        target_size=(150,150),\n",
+    "                                                        batch_size=batch_size,\n",
+    "                                                       class_mode='binary')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Build the Model\n",
+    "With a set of images very little work has to be done before the model is created and trained. However, when we model first the likelihood of getting a high accuracy is low unless we make use of a pre-trained model with specified weights. This is not a bad thing though!\n",
+    "\n",
+    "To Do: \n",
+    "- Build a Sequential model with multiple layers\n",
+    "- Compile the built model\n",
+    "- Train the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_format = 'channels_first'\n",
+    "\n",
+    "model = Sequential()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.add(Convolution2D(32, (3,3), input_shape=(150,150,3)))\n",
+    "model.add(Activation('relu'))\n",
+    "model.add(MaxPooling2D(data_format=data_format,\n",
+    "                      pool_size=(2,2)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.add(Convolution2D(32, (3,3)))\n",
+    "model.add(Activation('relu'))\n",
+    "model.add(MaxPooling2D(data_format=data_format,\n",
+    "                      pool_size=(2,2)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.add(Convolution2D(64, (3,3))) \n",
+    "model.add(Activation('relu'))\n",
+    "model.add(MaxPooling2D(data_format=data_format,\n",
+    "                       pool_size=(2,2)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.add(Convolution2D(64, (3,3))) \n",
+    "model.add(Activation('relu'))\n",
+    "model.add(MaxPooling2D(data_format=data_format,\n",
+    "                       pool_size=(2,2)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.add(Flatten())\n",
+    "model.add(Dense(64))\n",
+    "model.add(Activation('relu'))\n",
+    "model.add(Dropout(0.5))\n",
+    "model.add(Dense(1))\n",
+    "\n",
+    "model.add(Activation('sigmoid'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.compile(optimizer=\"rmsprop\",\n",
+    "              loss=\"binary_crossentropy\",\n",
+    "              metrics=[\"accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 1/15\n",
+      "125/125 [==============================] - 336s 3s/step - loss: 0.7441 - acc: 0.5015 - val_loss: 0.6912 - val_acc: 0.5685\n",
+      "Epoch 2/15\n",
+      "125/125 [==============================] - 333s 3s/step - loss: 0.7000 - acc: 0.5335 - val_loss: 0.6719 - val_acc: 0.5715\n",
+      "Epoch 3/15\n",
+      "125/125 [==============================] - 327s 3s/step - loss: 0.6882 - acc: 0.5575 - val_loss: 0.6573 - val_acc: 0.5900\n",
+      "Epoch 4/15\n",
+      "125/125 [==============================] - 347s 3s/step - loss: 0.6751 - acc: 0.5750 - val_loss: 0.6412 - val_acc: 0.6715\n",
+      "Epoch 5/15\n",
+      "125/125 [==============================] - 350s 3s/step - loss: 0.6721 - acc: 0.6030 - val_loss: 0.6150 - val_acc: 0.6740\n",
+      "Epoch 6/15\n",
+      "125/125 [==============================] - 2619s 21s/step - loss: 0.6841 - acc: 0.6055 - val_loss: 0.6245 - val_acc: 0.6730\n",
+      "Epoch 7/15\n",
+      "125/125 [==============================] - 597s 5s/step - loss: 0.6407 - acc: 0.6355 - val_loss: 0.6233 - val_acc: 0.6115\n",
+      "Epoch 8/15\n",
+      "125/125 [==============================] - 611s 5s/step - loss: 0.6441 - acc: 0.6685 - val_loss: 0.6169 - val_acc: 0.6505\n",
+      "Epoch 9/15\n",
+      "125/125 [==============================] - 600s 5s/step - loss: 0.6295 - acc: 0.6545 - val_loss: 0.6058 - val_acc: 0.6540\n",
+      "Epoch 10/15\n",
+      "125/125 [==============================] - 616s 5s/step - loss: 0.6387 - acc: 0.6480 - val_loss: 0.6135 - val_acc: 0.6960\n",
+      "Epoch 11/15\n",
+      " 78/125 [=================>............] - ETA: 2:48 - loss: 0.6311 - acc: 0.6306"
+     ]
+    }
+   ],
+   "source": [
+    "model.fit_generator(train_generator,\n",
+    "                    steps_per_epoch=2000 // batch_size,\n",
+    "                    epochs=15,\n",
+    "                    validation_data=validation_generator,\n",
+    "                    validation_steps=800 // batch_size)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Exercise \n",
+    "1. Try and improve the model above the accuracy you are getting at 5 epochs. Things to try:\n",
+    "        - Add more layers\n",
+    "        - Change the number of epochs\n",
+    "        - Augment your data more. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\"\"\"\"\n",
+    "            accuracy 0.6465 for original\n",
+    "\"\"\"\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
